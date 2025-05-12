@@ -26,6 +26,17 @@ from babeldoc.assets.assets import get_doclayout_onnx_model_path
 
 # from huggingface_hub import hf_hub_download
 
+from tpu_perf.infer import SGInfer
+import os
+class EngineOV:
+    def __init__(self, model_path="", batch=1, device_id=0):
+        self.model = SGInfer(model_path, batch=batch, devices=[device_id])
+
+    def __call__(self, values):
+        task_id = self.model.put(*values)
+        task_id, results, valid = self.model.get()
+        return results
+
 logger = logging.getLogger(__name__)
 
 
@@ -106,11 +117,16 @@ os_name = platform.system()
 class OnnxModel(DocLayoutModel):
     def __init__(self, model_path: str):
         self.model_path = model_path
-
+        self.bmodel_path = str(model_path).replace(".onnx", ".bmodel")
+        if not os.path.exists(self.bmodel_path):
+            url= "https://www.modelscope.cn/models/wlc952/aigchub_models/resolve/master/babeldoc/doclayout_yolo_docstructbench_imgsz1024.bmodel"
+            cmd = f"wget '{url}' -O '{self.bmodel_path}'"
+            os.system(cmd)
+            
         model = onnx.load(model_path)
         metadata = {d.key: d.value for d in model.metadata_props}
-        self._stride = ast.literal_eval(metadata["stride"])
-        self._names = ast.literal_eval(metadata["names"])
+        self._stride = ast.literal_eval(metadata["stride"]) # 32
+        self._names = ast.literal_eval(metadata["names"]) # {0: 'title', 1: 'plain text', 2: 'abandon', 3: 'figure', 4: 'figure_caption', 5: 'table', 6: 'table_caption', 7: 'table_footnote', 8: 'isolate_formula', 9: 'formula_caption'}
         providers = []
 
         available_providers = onnxruntime.get_available_providers()
@@ -118,10 +134,11 @@ class OnnxModel(DocLayoutModel):
             if re.match(r"dml|cuda|cpu", provider, re.IGNORECASE):
                 logger.info(f"Available Provider: {provider}")
                 providers.append(provider)
-        self.model = onnxruntime.InferenceSession(
-            model.SerializeToString(),
-            providers=providers,
-        )
+        # self.model = onnxruntime.InferenceSession(
+        #     model.SerializeToString(),
+        #     providers=providers,
+        # )
+        self.bmodel = EngineOV(self.bmodel_path)
         self.lock = threading.Lock()
 
     @staticmethod
@@ -254,8 +271,8 @@ class OnnxModel(DocLayoutModel):
             new_h, new_w = batch_input.shape[2:]
 
             # Run inference
-            batch_preds = self.model.run(None, {"images": batch_input})[0]
-
+            # batch_preds = self.model.run(None, {"images": batch_input})[0]
+            batch_preds = self.bmodel([batch_input])[0]
             # Process each prediction in the batch
             for j in range(batch_size_actual):
                 preds = batch_preds[j]
@@ -295,3 +312,4 @@ class OnnxModel(DocLayoutModel):
                 page.page_number + 1,
             )
             yield page, predict_result
+
