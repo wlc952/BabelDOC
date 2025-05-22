@@ -17,7 +17,7 @@ classifiers = [
 ]
 keywords = ["PDF"]
 dependencies = [
-    "tpu_perf @ https://www.modelscope.cn/models/wlc952/aigchub_models/resolve/master/tpu_perf-1.2.60-py3-none-manylinux2014_aarch64.whl",
+    "tpu_perf @ https://www.modelscope.cn/models/wlc952/aigchub_models/resolve/master/tpu_perf-1.4.6-py3-none-manylinux2014_aarch64.whl",
     "bitstring>=4.3.0",
     "configargparse>=1.7",
     "httpx[socks]>=0.27.0",
