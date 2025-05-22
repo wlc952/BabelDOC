@@ -607,6 +607,9 @@ class StylesAndFormulas:
             r"|.*Mincho.*"
             r"|.*Amerigo.*"
             r"|.*MSGloriolaIIStd.*"
+            r"|.*CMU.+"
+            r"|.*LinLibertine.*"
+            r"|.*txsys.*"
             r")$"
         )
         precise_formula_font_pattern = (
@@ -644,7 +647,7 @@ class StylesAndFormulas:
             r"|.*KpMath.*"
             r"|.*Lete Sans Math.*"
             r"|.*LeteSansMath.*"
-            r"|.*LinLibertineO.*"
+            # r"|.*LinLibertineO.*"
             r"|.*Linux Libertine O.*"
             r"|.*LibertinusMath-Regular.*"
             r"|.*Libertinus Math.*"

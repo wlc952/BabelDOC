@@ -23,7 +23,7 @@ from babeldoc.translation_config import TranslationConfig
 from babeldoc.translation_config import WatermarkOutputMode
 
 logger = logging.getLogger(__name__)
-__version__ = "0.3.43"
+__version__ = "0.3.52"
 
 
 def create_parser():
@@ -69,6 +69,11 @@ def create_parser():
         "--restore-offline-assets",
         default=None,
         help="Restore offline assets package from the specified file",
+    )
+    parser.add_argument(
+        "--working-dir",
+        default=None,
+        help="Working directory for translation. If not set, use temp directory.",
     )
     # translation option argument group
     translation_group = parser.add_argument_group(
@@ -320,7 +325,7 @@ async def main():
         if not Path(file).exists():
             logger.error(f"文件不存在：{file}")
             exit(1)
-        if not file.endswith(".pdf"):
+        if not file.lower().endswith(".pdf"):
             logger.error(f"文件不是 PDF 文件：{file}")
             exit(1)
         pending_files.append(file)
@@ -338,6 +343,21 @@ async def main():
                 exit(1)
     else:
         args.output = None
+
+    if args.working_dir:
+        working_dir = Path(args.working_dir)
+        if not working_dir.exists():
+            logger.info(f"工作目录不存在，创建：{working_dir}")
+            try:
+                working_dir.mkdir(parents=True, exist_ok=True)
+            except OSError:
+                logger.critical(
+                    f"Failed to create working directory at {working_dir}",
+                    exc_info=True,
+                )
+                exit(1)
+    else:
+        working_dir = None
 
     watermark_output_mode = WatermarkOutputMode.Watermarked
     if args.no_watermark:
@@ -390,6 +410,7 @@ async def main():
             skip_scanned_detection=args.skip_scanned_detection,
             ocr_workaround=args.ocr_workaround,
             custom_system_prompt=args.custom_system_prompt,
+            working_dir=working_dir,
         )
 
         # Create progress handler

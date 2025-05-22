@@ -405,6 +405,9 @@ def fix_null_xref(doc: Document) -> None:
             elif obj and "/ASCII85Decode" in obj:  # make pdfminer happy
                 data = doc.xref_stream(i)
                 doc.update_stream(i, data)
+            elif obj and "/LZWDecode" in obj:
+                data = doc.xref_stream(i)
+                doc.update_stream(i, data)
         except Exception:
             doc.update_object(i, "[]")
 
@@ -423,9 +426,10 @@ def fix_filter(doc):
         contents = page.get_contents()
         if len(contents) > 1:
             page_streams = [doc.xref_stream(i) for i in contents]
-            head = contents[0]
-            doc.update_stream(head, b" ".join(page_streams))
-            doc.xref_set_key(page.xref, "Contents", f"{head} 0 R")
+            r = doc.get_new_xref()
+            doc.update_object(r, "<<>>")
+            doc.update_stream(r, b" ".join(page_streams))
+            doc.xref_set_key(page.xref, "Contents", f"{r} 0 R")
 
 
 def do_translate(
@@ -643,8 +647,11 @@ def _do_translate_single(
             "input.decompressed.pdf",
         )
         # Fix null xref in PDF file
-        fix_filter(doc_input)
-        fix_null_xref(doc_input)
+        try:
+            fix_filter(doc_input)
+            fix_null_xref(doc_input)
+        except Exception:
+            logger.exception("auto fix failed, please check the pdf file")
         doc_input.save(output_path, expand=True, pretty=True)
         del doc_input
 
@@ -654,8 +661,11 @@ def _do_translate_single(
     resfont = "china-ss"
 
     # Fix null xref in PDF file
-    fix_filter(doc_pdf2zh)
-    fix_null_xref(doc_pdf2zh)
+    try:
+        fix_filter(doc_pdf2zh)
+        fix_null_xref(doc_pdf2zh)
+    except Exception:
+        logger.exception("auto fix failed, please check the pdf file")
 
     mediabox_data = fix_media_box(doc_pdf2zh)
 
